@@ -4,44 +4,119 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>To-Do List</title>
+    <style>
+        /* 색상·폰트 등 기본 설정 */
+        :root {
+            --bg-color: #E0F7E0; /* 전체 바탕화면 색 */
+            --text-color: #333333; /* 기본 글자 색 */
+        }
+
+        /* 전체 바탕화면, 글씨체 */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: Arial, sans-serif;
+            color: var(--text-color);
+        }
+    </style>
 </head>
 <body>
     <h1>To-Do List</h1>
     <ul id="todo-list"></ul>
+
     <form id="todo-form">
         <input type="text" id="title" placeholder="Title" required>
         <input type="text" id="description" placeholder="Description" required>
         <button type="submit">Add To-Do</button>
     </form>
+
     <script>
+        // 모든 To-Do 항목 가져오기
         async function fetchTodos() {
             const response = await fetch('/todos');
             const todos = await response.json();
+
             const todoList = document.getElementById('todo-list');
             todoList.innerHTML = '';
+
             todos.forEach(todo => {
                 const li = document.createElement('li');
-                li.textContent = `${todo.title}: ${todo.description}`;
+                li.textContent = `${todo.title} : ${todo.description} (completed: ${todo.completed}) `;
+
+                // 상세 보기(단일 조회) 버튼
+                const detailBtn = document.createElement('button');
+                detailBtn.textContent = 'Detail';
+                detailBtn.addEventListener('click', async () => {
+                    const res = await fetch(`/todos/${todo.id}`);
+                    if (res.ok) {
+                        const detailItem = await res.json();
+                        alert(`Title: ${detailItem.title}\nDescription: ${detailItem.description}\nCompleted: ${detailItem.completed}`);
+                    } else {
+                        alert('Item not found');
+                    }
+                });
+                li.appendChild(detailBtn);
+
+                // 완료 상태 토글 버튼
+                const toggleBtn = document.createElement('button');
+                toggleBtn.textContent = todo.completed ? 'Mark Incomplete' : 'Mark Complete';
+                toggleBtn.addEventListener('click', async () => {
+                    const res = await fetch(`/todos/${todo.id}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            completed: !todo.completed
+                        })
+                    });
+                    if (res.ok) {
+                        fetchTodos();
+                    }
+                });
+                li.appendChild(toggleBtn);
+
+                // 삭제 버튼
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', async () => {
+                    const res = await fetch(`/todos/${todo.id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        fetchTodos();
+                    }
+                });
+                li.appendChild(deleteBtn);
+
                 todoList.appendChild(li);
             });
         }
 
+        // 신규 To-Do 등록
         document.getElementById('todo-form').addEventListener('submit', async (event) => {
             event.preventDefault();
             const title = document.getElementById('title').value;
             const description = document.getElementById('description').value;
+
             const response = await fetch('/todos', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ id: Date.now(), title, description, completed: false })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: Date.now(),
+                    title: title,
+                    description: description,
+                    completed: false
+                })
             });
+
             if (response.ok) {
+                document.getElementById('title').value = '';
+                document.getElementById('description').value = '';
                 fetchTodos();
             }
         });
 
+        // 초기 로드 시 목록 표시
         fetchTodos();
     </script>
 </body>

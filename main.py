@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import json
@@ -61,8 +61,34 @@ def delete_todo(todo_id: int):
     return {"message": "To-Do item deleted"}
 
 # HTML 파일 서빙
+# main.py (일부 수정)
 @app.get("/", response_class=HTMLResponse)
 def read_root():
-    with open("templates/index.html", "r") as file:
+    with open("templates/index.html", "r", encoding="utf-8") as file:
         content = file.read()
     return HTMLResponse(content=content)
+
+
+
+# 개별 항목 id로 찾기
+@app.get("/todos/{todo_id}", response_model=TodoItem)
+def get_todo_by_id(todo_id: int):
+    todos = load_todos()
+    for todo in todos:
+        if todo["id"] == todo_id:
+            return todo
+    raise HTTPException(status_code=404, detail="To-Do item not found")
+
+# 완료 처리하기 
+class PatchTodo(BaseModel):
+    completed: bool
+
+@app.patch("/todos/{todo_id}", response_model=TodoItem)
+def patch_todo(todo_id: int, patch_data: PatchTodo):
+    todos = load_todos()
+    for todo in todos:
+        if todo["id"] == todo_id:
+            todo["completed"] = patch_data.completed
+            save_todos(todos)
+            return todo
+    raise HTTPException(status_code=404, detail="To-Do item not found")
