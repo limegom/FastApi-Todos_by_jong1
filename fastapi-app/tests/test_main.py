@@ -1,9 +1,9 @@
 import sys
 import os
 
-# 수정: 현재 테스트 파일의 부모 디렉터리(fastapi-app)가 아닌, fastapi-app 폴더 자체를 sys.path에 추가
-# 이유: main.py가 fastapi-app 폴더 내에 위치하므로, 해당 폴더를 추가해야 import가 제대로 동작함
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'fastapi-app')))
+# 수정: 현재 파일(fastapi-app/tests/test_main.py)의 상위 폴더(fastapi-app)를 sys.path에 추가
+# 이유: main.py는 fastapi-app 폴더 내에 존재하므로, 해당 경로가 import 검색 경로에 포함되어야 함
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
 from fastapi.testclient import TestClient
