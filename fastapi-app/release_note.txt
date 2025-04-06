@@ -1,0 +1,41 @@
+Version 4.0.0
+-
+버튼 모양 변경
+글씨체 변경
+화면 변경
+(전체적인 UI 변경)
+
+Version 4.0
+
+pytest + postman을 위한 폴더 tests와 파일 추가
+
+
+Version 3.0.0
+
+좌우 화면 생성
+왼쪽 화면:간단한 화면 , todo 생성
+오른쪽 화면: 모든 todo @ last week
+
+Version 2.1.0
+
+도커 추가
+파일 경로 변경
+
+Version 2.0.0
+
+삭제 기능 추가
+완료 기능 추가
+상세정보 보기 추가
+
+눈에 좋은 색상으로 변경
+
+Version 1.0.1
+
+다른 사람 서버에 보내기 위해 레포지토리 이름 변경
+FastApi-Todos -> FastApi-Todos_by_jong1
+
+Version 1.0.0
+
+설명: 웹에 to-do list를 작성할 수 있는 프로그램이다.
+
+기능: 제목-내용을 입력할 수 있다
