@@ -1,219 +1,251 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>To-Do List - Split View</title>
-  <style>
-    :root {
-      --bg-color: #E0F7E0;
-      --text-color: #333;
-      --panel-bg: #E0F7E0;
-      --border-color: #ccc;
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: var(--bg-color);
-      font-family: Arial, sans-serif;
-      color: var(--text-color);
-    }
-    .container {
-      display: flex;
-      height: 100vh;
-    }
-    .panel {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-      border: 1px solid var(--border-color);
-    }
-    .panel.left {
-      border-right: 0;
-      background-color: var(--panel-bg);
-    }
-    .panel.right {
-      background-color: var(--panel-bg);
-    }
-    h1, h2 {
-      margin: 0 0 10px;
-    }
-    form {
-      margin-bottom: 20px;
-    }
-    input[type="text"] {
-      padding: 5px;
-      margin-right: 5px;
-      margin-bottom: 10px;
-    }
-    button {
-      padding: 5px 10px;
-      margin-right: 5px;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      padding: 10px;
-      border-bottom: 1px solid var(--border-color);
-    }
-    li.completed {
-      text-decoration: line-through;
-      color: gray;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List - Split View</title>
+    <style>
+        :root {
+            --bg-color: #E0F7E0;
+            --text-color: #333;
+            --panel-bg: #E0F7E0;
+            --border-color: #ccc;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: "Segoe UI", "Helvetica Neue", "Apple SD Gothic Neo", sans-serif; /* ✅ 변경됨 */
+            font-size: 16px; /* ✅ 변경됨 */
+            line-height: 1.6; /* ✅ 변경됨 */
+            color: var(--text-color);
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .panel {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+
+            .panel.left {
+                border-right: 0;
+                background-color: var(--panel-bg);
+            }
+
+            .panel.right {
+                background-color: var(--panel-bg);
+            }
+
+        h1, h2 {
+            margin: 0 0 10px;
+            font-weight: 600; /* ✅ 변경됨 */
+            letter-spacing: -0.5px; /* ✅ 변경됨 */
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            padding: 5px;
+            margin-right: 5px;
+            margin-bottom: 10px;
+            font-family: inherit; /* ✅ 변경됨 */
+            font-size: 14px; /* ✅ 변경됨 */
+            border: 1px solid #ccc; /* ✅ 변경됨 */
+            border-radius: 4px; /* ✅ 변경됨 */
+        }
+
+        button {
+            padding: 6px 12px; /* ✅ 변경됨 */
+            background-color: #4CAF50; /* ✅ 변경됨 */
+            color: white; /* ✅ 변경됨 */
+            border: none; /* ✅ 변경됨 */
+            border-radius: 6px; /* ✅ 변경됨 */
+            cursor: pointer; /* ✅ 변경됨 */
+            font-weight: 500; /* ✅ 변경됨 */
+            font-family: inherit; /* ✅ 변경됨 */
+            transition: background-color 0.2s ease-in-out; /* ✅ 변경됨 */
+        }
+
+            button:hover {
+                background-color: #45a049; /* ✅ 변경됨 */
+            }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 15px; /* ✅ 변경됨 */
+        }
+
+            li.completed {
+                text-decoration: line-through;
+                color: gray;
+            }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <!-- 좌측 패널: 신규 등록 및 미완료 ToDo -->
-    <div class="panel left">
-      <h2>Active To-Dos</h2>
-      <form id="active-todo-form">
-        <input type="text" id="active-title" placeholder="Title" required>
-        <input type="text" id="active-description" placeholder="Description" required>
-        <button type="submit">Add To-Do</button>
-      </form>
-      <ul id="active-todo-list"></ul>
+    <div class="container">
+        <!-- 좌측 패널: 신규 등록 및 미완료 ToDo -->
+        <div class="panel left">
+            <h2>Active To-Dos</h2>
+            <form id="active-todo-form">
+                <input type="text" id="active-title" placeholder="Title" required>
+                <input type="text" id="active-description" placeholder="Description" required>
+                <button type="submit">Add To-Do</button>
+            </form>
+            <ul id="active-todo-list"></ul>
+        </div>
+        <!-- 우측 패널: 전체 ToDo 목록 (완료 포함) -->
+        <div class="panel right">
+            <h2>All To-Dos</h2>
+            <ul id="all-todo-list"></ul>
+        </div>
     </div>
-    <!-- 우측 패널: 전체 ToDo 목록 (완료 포함) -->
-    <div class="panel right">
-      <h2>All To-Dos</h2>
-      <ul id="all-todo-list"></ul>
-    </div>
-  </div>
 
-  <script>
-    // 백엔드에서 ToDo 항목 조회
-    async function fetchTodos() {
-      try {
-        const res = await fetch('/todos');
-        return await res.json();
-      } catch (error) {
-        console.error('Fetch Error:', error);
-        return [];
-      }
-    }
-
-    // 좌측: 활성(ToDo 미완료) 항목과 우측: 전체 항목 렌더링
-    async function renderTodos() {
-      const todos = await fetchTodos();
-      const activeList = document.getElementById('active-todo-list');
-      const allList = document.getElementById('all-todo-list');
-
-      activeList.innerHTML = '';
-      allList.innerHTML = '';
-
-      todos.forEach(todo => {
-        // 우측 전체 목록 항목
-        const liAll = document.createElement('li');
-        liAll.className = todo.completed ? 'completed' : '';
-        liAll.innerHTML = `<strong>${todo.title}</strong>: ${todo.description} (Completed: ${todo.completed}) `;
-
-        // 상세보기 버튼
-        const detailBtn = document.createElement('button');
-        detailBtn.textContent = 'Detail';
-        detailBtn.addEventListener('click', async () => {
-          try {
-            const res = await fetch(`/todos/${todo.id}`);
-            if (res.ok) {
-              const detailTodo = await res.json();
-              alert(`Title: ${detailTodo.title}\nDescription: ${detailTodo.description}\nCompleted: ${detailTodo.completed}`);
-            } else {
-              alert('Todo not found');
-            }
-          } catch (err) {
-            console.error(err);
-          }
-        });
-        liAll.appendChild(detailBtn);
-
-        // 완료 토글 버튼
-        const toggleBtn = document.createElement('button');
-        toggleBtn.textContent = todo.completed ? 'Mark Incomplete' : 'Mark Complete';
-        toggleBtn.addEventListener('click', async () => {
-          try {
-            const res = await fetch(`/todos/${todo.id}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ completed: !todo.completed })
-            });
-            if (res.ok) renderTodos();
-          } catch (err) {
-            console.error(err);
-          }
-        });
-        liAll.appendChild(toggleBtn);
-
-        // 삭제 버튼
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.addEventListener('click', async () => {
-          try {
-            const res = await fetch(`/todos/${todo.id}`, { method: 'DELETE' });
-            if (res.ok) renderTodos();
-          } catch (err) {
-            console.error(err);
-          }
-        });
-        liAll.appendChild(deleteBtn);
-        allList.appendChild(liAll);
-
-        // 좌측 활성 목록: 미완료 항목만 표시
-        if (!todo.completed) {
-          const liActive = document.createElement('li');
-          liActive.innerHTML = `<strong>${todo.title}</strong>: ${todo.description} `;
-          const completeBtn = document.createElement('button');
-          completeBtn.textContent = 'Complete';
-          completeBtn.addEventListener('click', async () => {
+    <script>
+        // 백엔드에서 ToDo 항목 조회
+        async function fetchTodos() {
             try {
-              const res = await fetch(`/todos/${todo.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ completed: true })
-              });
-              if (res.ok) renderTodos();
-            } catch (err) {
-              console.error(err);
+                const res = await fetch('/todos');
+                return await res.json();
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                return [];
             }
-          });
-          liActive.appendChild(completeBtn);
-          activeList.appendChild(liActive);
         }
-      });
-    }
 
-    // 신규 ToDo 등록 처리 (좌측 폼)
-    document.getElementById('active-todo-form').addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const titleInput = document.getElementById('active-title');
-      const descriptionInput = document.getElementById('active-description');
+        // 좌측: 활성(ToDo 미완료) 항목과 우측: 전체 항목 렌더링
+        async function renderTodos() {
+            const todos = await fetchTodos();
+            const activeList = document.getElementById('active-todo-list');
+            const allList = document.getElementById('all-todo-list');
 
-      const newTodo = {
-        id: Date.now(),
-        title: titleInput.value,
-        description: descriptionInput.value,
-        completed: false
-      };
+            activeList.innerHTML = '';
+            allList.innerHTML = '';
 
-      try {
-        const res = await fetch('/todos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newTodo)
+            todos.forEach(todo => {
+                // 우측 전체 목록 항목
+                const liAll = document.createElement('li');
+                liAll.className = todo.completed ? 'completed' : '';
+                liAll.innerHTML = `<strong>${todo.title}</strong>: ${todo.description} (Completed: ${todo.completed}) `;
+
+                // 상세보기 버튼
+                const detailBtn = document.createElement('button');
+                detailBtn.textContent = 'Detail';
+                detailBtn.addEventListener('click', async () => {
+                    try {
+                        const res = await fetch(`/todos/${todo.id}`);
+                        if (res.ok) {
+                            const detailTodo = await res.json();
+                            alert(`Title: ${detailTodo.title}\nDescription: ${detailTodo.description}\nCompleted: ${detailTodo.completed}`);
+                        } else {
+                            alert('Todo not found');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                });
+                liAll.appendChild(detailBtn);
+
+                // 완료 토글 버튼
+                const toggleBtn = document.createElement('button');
+                toggleBtn.textContent = todo.completed ? 'Mark Incomplete' : 'Mark Complete';
+                toggleBtn.addEventListener('click', async () => {
+                    try {
+                        const res = await fetch(`/todos/${todo.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ completed: !todo.completed })
+                        });
+                        if (res.ok) renderTodos();
+                    } catch (err) {
+                        console.error(err);
+                    }
+                });
+                liAll.appendChild(toggleBtn);
+
+                // 삭제 버튼
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', async () => {
+                    try {
+                        const res = await fetch(`/todos/${todo.id}`, { method: 'DELETE' });
+                        if (res.ok) renderTodos();
+                    } catch (err) {
+                        console.error(err);
+                    }
+                });
+                liAll.appendChild(deleteBtn);
+                allList.appendChild(liAll);
+
+                // 좌측 활성 목록: 미완료 항목만 표시
+                if (!todo.completed) {
+                    const liActive = document.createElement('li');
+                    liActive.innerHTML = `<strong>${todo.title}</strong>: ${todo.description} `;
+                    const completeBtn = document.createElement('button');
+                    completeBtn.textContent = 'Complete';
+                    completeBtn.addEventListener('click', async () => {
+                        try {
+                            const res = await fetch(`/todos/${todo.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ completed: true })
+                            });
+                            if (res.ok) renderTodos();
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    });
+                    liActive.appendChild(completeBtn);
+                    activeList.appendChild(liActive);
+                }
+            });
+        }
+
+        // 신규 ToDo 등록 처리 (좌측 폼)
+        document.getElementById('active-todo-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const titleInput = document.getElementById('active-title');
+            const descriptionInput = document.getElementById('active-description');
+
+            const newTodo = {
+                id: Date.now(),
+                title: titleInput.value,
+                description: descriptionInput.value,
+                completed: false
+            };
+
+            try {
+                const res = await fetch('/todos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newTodo)
+                });
+                if (res.ok) {
+                    titleInput.value = '';
+                    descriptionInput.value = '';
+                    renderTodos();
+                }
+            } catch (error) {
+                console.error(error);
+            }
         });
-        if (res.ok) {
-          titleInput.value = '';
-          descriptionInput.value = '';
-          renderTodos();
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    });
 
-    // 초기 렌더링
-    window.onload = renderTodos;
-  </script>
+        // 초기 렌더링
+        window.onload = renderTodos;
+    </script>
 </body>
 </html>
