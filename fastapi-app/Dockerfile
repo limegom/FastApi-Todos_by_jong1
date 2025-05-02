@@ -1,5 +1,5 @@
-# Python 3.9 베이스 이미지 사용
-FROM python:3.9
+# Python 3.9-slim 베이스 이미지 사용(용량 감소)
+FROM python:3.9-slim
 
 # 작업 디렉토리 설정
 WORKDIR /app
