@@ -9,12 +9,11 @@ services:
     ports:
       - "5001:5001"
 
-  services:
   sonarqube:
     image: sonarqube:latest
-    container_name: sonarqube
+    container_name: sonarqube_j1
     ports:
-      - "9001:9000"
+      - "8001:9000"
     environment:
       - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true  # 메모리 제한 환경에서 유용한 옵션
       - SONAR_WEB_HOST=0.0.0.0      # 모든 인터페이스에 바인딩 (기본값 127.0.0.1 → loopback만)
