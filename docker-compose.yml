@@ -1,5 +1,3 @@
-version: "3.7"
-
 services:
   fastapi-app:
     build:
@@ -11,7 +9,7 @@ services:
 
   sonarqube:
     image: sonarqube:latest
-    container_name: sonarqube_j1
+    container_name: sonarqube
     ports:
       - "8001:9000"
     environment:
