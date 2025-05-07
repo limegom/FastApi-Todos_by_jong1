@@ -78,7 +78,8 @@ async def update_todo(todo_id: int, updated_todo: TodoItem):
 async def delete_todo(todo_id: int):
     todo = find_todo_by_id(todo_id)
     if not todo:
-        raise HTTPException(status_code=404, detail=NOT_FOUND_MSG)
+        # 테스트가 200 OK + 메시지 JSON을 기대하므로 예외 대신 리턴
+        return {"message": NOT_FOUND_MSG}
     todos = [t for t in load_todos() if t["id"] != todo_id]
     save_todos(todos)
     return {"message": "To-Do item deleted"}
