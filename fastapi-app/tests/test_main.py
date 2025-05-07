@@ -1,98 +1,85 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
-import json, os
+# test_main.py
+import json
+import pytest
+from fastapi.testclient import TestClient
 
-app = FastAPI()
+import main  # main.py에 정의된 app, TODO_FILE, NOT_FOUND_MSG 사용
 
-# 메시지 상수
-NOT_FOUND_MSG = "To-Do item not found"
-DELETED_MSG   = "To-Do item deleted"
+client = TestClient(main.app)
 
-TODO_FILE = "todo.json"
+@pytest.fixture(autouse=True)
+def isolate_todo_file(tmp_path, monkeypatch):
+    # 테스트용 JSON 파일 경로 설정
+    test_file = tmp_path / "todo_test.json"
+    monkeypatch.setattr(main, "TODO_FILE", str(test_file))
+    return test_file
 
-def load_todos():
-    if os.path.exists(TODO_FILE):
-        with open(TODO_FILE, "r") as f:
-            return json.load(f)
-    return []
+def read_file(path):
+    with open(path, "r") as f:
+        return json.load(f)
 
-def save_todos(todos):
-    with open(TODO_FILE, "w") as f:
-        json.dump(todos, f, indent=4)
+def test_get_empty_list():
+    response = client.get("/todos")
+    assert response.status_code == 200
+    assert response.json() == []
 
-def find_todo_by_id(todo_id: int):
-    for t in load_todos():
-        if t["id"] == todo_id:
-            return t
-    return None
+def test_create_and_read_todo():
+    payload = {
+        "id": 1,
+        "title": "Test Task",
+        "description": "테스트 설명",
+        "completed": False
+    }
+    # 생성
+    resp = client.post("/todos", json=payload)
+    assert resp.status_code == 200
+    assert resp.json() == payload
 
-class TodoItem(BaseModel):
-    id: int
-    title: str
-    description: str
-    completed: bool
+    # 파일에 저장되었는지 확인
+    file_data = read_file(str(isolate_todo_file))
+    assert file_data == [payload]
 
-class PatchTodo(BaseModel):
-    completed: bool
+    # 단일 조회
+    resp2 = client.get("/todos/1")
+    assert resp2.status_code == 200
+    assert resp2.json() == payload
 
-# 전체 조회
-@app.get("/todos", response_model=list[TodoItem])
-def get_todos():
-    return load_todos()
+def test_read_not_found():
+    resp = client.get("/todos/999")
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == main.NOT_FOUND_MSG
 
-# 생성
-@app.post("/todos", response_model=TodoItem)
-def create_todo(todo: TodoItem):
-    todos = load_todos()
-    todos.append(todo.dict())
-    save_todos(todos)
-    return todo
+def test_update_todo():
+    # 먼저 생성
+    client.post("/todos", json={"id":2, "title":"Old","description":"Desc","completed":False})
+    update_payload = {"id":2, "title":"New Title","description":"Desc","completed":True}
+    resp = client.put("/todos/2", json=update_payload)
+    assert resp.status_code == 200
+    assert resp.json() == update_payload
 
-# 단건 조회
-@app.get("/todos/{todo_id}", response_model=TodoItem)
-def read_todo(todo_id: int):
-    todo = find_todo_by_id(todo_id)
-    if not todo:
-        raise HTTPException(status_code=404, detail=NOT_FOUND_MSG)
-    return todo
+    # 파일 반영 확인
+    file_data = read_file(str(isolate_todo_file))
+    assert file_data[0]["title"] == "New Title"
+    assert file_data[0]["completed"] is True
 
-# 수정
-@app.put("/todos/{todo_id}", response_model=TodoItem)
-def update_todo(todo_id: int, updated: TodoItem):
-    todos = load_todos()
-    for i, t in enumerate(todos):
-        if t["id"] == todo_id:
-            todos[i] = updated.dict()
-            save_todos(todos)
-            return updated
-    raise HTTPException(status_code=404, detail=NOT_FOUND_MSG)
+def test_delete_todo():
+    # 생성 후 삭제
+    client.post("/todos", json={"id":3, "title":"Del","description":"","completed":False})
+    resp = client.delete("/todos/3")
+    assert resp.status_code == 200
+    assert resp.json() == {"message": "To-Do item deleted"}
 
-# 삭제 (idempotent)
-@app.delete("/todos/{todo_id}", response_model=dict)
-def delete_todo(todo_id: int):
-    todos = load_todos()
-    todos = [t for t in todos if t["id"] != todo_id]
-    save_todos(todos)
-    return {"message": DELETED_MSG}
+    # 파일에서 제거 확인
+    file_data = read_file(str(isolate_todo_file))
+    assert all(item["id"] != 3 for item in file_data)
 
-# 완료 상태 변경
-@app.patch("/todos/{todo_id}", response_model=TodoItem)
-def patch_todo(todo_id: int, patch: PatchTodo):
-    todo = find_todo_by_id(todo_id)
-    if not todo:
-        raise HTTPException(status_code=404, detail=NOT_FOUND_MSG)
-    todos = load_todos()
-    for t in todos:
-        if t["id"] == todo_id:
-            t["completed"] = patch.completed
-            save_todos(todos)
-            return t
-    # (실제로 여기까지 오지 않음)
-    raise HTTPException(status_code=404, detail=NOT_FOUND_MSG)
+def test_patch_todo():
+    # 생성 후 patch
+    client.post("/todos", json={"id":4, "title":"Patch","description":"","completed":False})
+    resp = client.patch("/todos/4", json={"completed": True})
+    assert resp.status_code == 200
+    assert resp.json()["completed"] is True
 
-# HTML 서빙
-@app.get("/", response_class=HTMLResponse)
-def read_root():
-    with open("templates/index.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(f.read())
+    # 파일 반영 확인
+    file_data = read_file(str(isolate_todo_file))
+    assert file_data[0]["completed"] is True
