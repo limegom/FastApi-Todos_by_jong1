@@ -1,5 +1,5 @@
 # Python 3.13-slim 베이스 이미지 사용(용량 감소)
-FROM python:3.13
+FROM python:3.13-slim
 
 # 작업 디렉토리 설정
 WORKDIR /app
