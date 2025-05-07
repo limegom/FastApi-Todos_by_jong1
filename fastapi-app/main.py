@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import json, os
 
@@ -33,11 +32,47 @@ class TodoItem(BaseModel):
     description: str
     completed: bool
 
+@app.get("/todos")
+async def get_todos():
+    return load_todos()
+
+@app.post("/todos")
+async def create_todo(item: TodoItem):
+    todos = load_todos()
+    todos.append(item.dict())
+    save_todos(todos)
+    return item
+
+@app.get("/todos/{todo_id}")
+async def read_todo(todo_id: int):
+    todo = find_todo_by_id(todo_id)
+    if not todo:
+        raise HTTPException(status_code=404, detail=NOT_FOUND_MSG)
+    return todo
+
+@app.put("/todos/{todo_id}")
+async def update_todo(todo_id: int, item: TodoItem):
+    todos = load_todos()
+    for i, t in enumerate(todos):
+        if t["id"] == todo_id:
+            todos[i] = item.dict()
+            save_todos(todos)
+            return item
+    raise HTTPException(status_code=404, detail=NOT_FOUND_MSG)
+
+@app.patch("/todos/{todo_id}")
+async def patch_todo(todo_id: int, patch_data: dict):
+    todos = load_todos()
+    for t in todos:
+        if t["id"] == todo_id:
+            t.update(patch_data)
+            save_todos(todos)
+            return t
+    raise HTTPException(status_code=404, detail=NOT_FOUND_MSG)
+
 @app.delete("/todos/{todo_id}", response_model=dict)
 async def delete_todo(todo_id: int):
     todos = load_todos()
-    # 존재하면 제거
     todos = [t for t in todos if t["id"] != todo_id]
     save_todos(todos)
-    # 항상 성공 메시지 반환
     return {"message": DELETED_MSG}
