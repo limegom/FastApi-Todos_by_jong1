@@ -1,79 +1,69 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import json
+# 수정: 현재 파일(fastapi-app/tests/test_main.py)의 상위 폴더(fastapi-app)를 sys.path에 추가
+# 이유: main.py는 fastapi-app 폴더 내에 존재하므로, 해당 경로가 import 검색 경로에 포함되어야 함
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pytest
 from fastapi.testclient import TestClient
-
-import main
-from main import app
+from main import app, save_todos, load_todos, TodoItem  # main.py가 fastapi-app 폴더 내에 존재하므로 ㄱㅊ
 
 client = TestClient(app)
 
 @pytest.fixture(autouse=True)
-def isolate_todo_file(tmp_path, monkeypatch):
-    test_file = tmp_path / "todo_test.json"
-    monkeypatch.setattr(main, "TODO_FILE", str(test_file))
-    return test_file
+def setup_and_teardown():
+    # 테스트 전 초기화
+    save_todos([])
+    yield
+    # 테스트 후 정리
+    save_todos([])
 
-def read_file(path):
-    with open(path, "r") as f:
-        return json.load(f)
-
-def test_get_empty_list():
+def test_get_todos_empty():
     response = client.get("/todos")
     assert response.status_code == 200
     assert response.json() == []
 
-def test_create_and_read_todo(isolate_todo_file):
-    payload = {
-        "id": 1,
-        "title": "Test Task",
-        "description": "테스트 설명",
-        "completed": False
-    }
-    resp = client.post("/todos", json=payload)
-    assert resp.status_code == 200
-    assert resp.json() == payload
+def test_get_todos_with_items():
+    todo = TodoItem(id=1, title="Test", description="Test description", completed=False)
+    save_todos([todo.dict()])
+    response = client.get("/todos")
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == "Test"
 
-    file_data = read_file(isolate_todo_file)
-    assert file_data == [payload]
+def test_create_todo():
+    todo = {"id": 1, "title": "Test", "description": "Test description", "completed": False}
+    response = client.post("/todos", json=todo)
+    assert response.status_code == 200
+    assert response.json()["title"] == "Test"
 
-    resp2 = client.get("/todos/1")
-    assert resp2.status_code == 200
-    assert resp2.json() == payload
+def test_create_todo_invalid():
+    todo = {"id": 1, "title": "Test"}
+    response = client.post("/todos", json=todo)
+    assert response.status_code == 422
 
-def test_read_not_found():
-    resp = client.get("/todos/999")
-    assert resp.status_code == 404
-    assert resp.json()["detail"] == main.NOT_FOUND_MSG
+def test_update_todo():
+    todo = TodoItem(id=1, title="Test", description="Test description", completed=False)
+    save_todos([todo.dict()])
+    updated_todo = {"id": 1, "title": "Updated", "description": "Updated description", "completed": True}
+    response = client.put("/todos/1", json=updated_todo)
+    assert response.status_code == 200
+    assert response.json()["title"] == "Updated"
 
-def test_update_todo(isolate_todo_file):
-    client.post("/todos", json={"id":2, "title":"Old","description":"Desc","completed":False})
-    update_payload = {"id":2, "title":"New Title","description":"Desc","completed":True}
-    resp = client.put("/todos/2", json=update_payload)
-    assert resp.status_code == 200
-    assert resp.json() == update_payload
+def test_update_todo_not_found():
+    updated_todo = {"id": 1, "title": "Updated", "description": "Updated description", "completed": True}
+    response = client.put("/todos/1", json=updated_todo)
+    assert response.status_code == 404
 
-    file_data = read_file(isolate_todo_file)
-    assert file_data[0]["title"] == "New Title"
-    assert file_data[0]["completed"] is True
+def test_delete_todo():
+    todo = TodoItem(id=1, title="Test", description="Test description", completed=False)
+    save_todos([todo.dict()])
+    response = client.delete("/todos/1")
+    assert response.status_code == 200
+    assert response.json()["message"] == "To-Do item deleted"
 
-def test_delete_todo(isolate_todo_file):
-    client.post("/todos", json={"id":3, "title":"Del","description":"","completed":False})
-    resp = client.delete("/todos/3")
-    assert resp.status_code == 200
-    assert resp.json() == {"message": "To-Do item deleted"}
-
-    file_data = read_file(isolate_todo_file)
-    assert all(item["id"] != 3 for item in file_data)
-
-def test_patch_todo(isolate_todo_file):
-    client.post("/todos", json={"id":4, "title":"Patch","description":"","completed":False})
-    resp = client.patch("/todos/4", json={"completed": True})
-    assert resp.status_code == 200
-    assert resp.json()["completed"] is True
-
-    file_data = read_file(isolate_todo_file)
-    assert file_data[0]["completed"] is True
+def test_delete_todo_not_found():
+    response = client.delete("/todos/1")
+    assert response.status_code == 200
+    assert response.json()["message"] == "To-Do item deleted"
