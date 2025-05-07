@@ -1,22 +1,18 @@
 import sys
 import os
 
-# ¼öÁ¤: ÇöÀç ÆÄÀÏ(fastapi-app/tests/test_main.py)ÀÇ »óÀ§ Æú´õ(fastapi-app)¸¦ sys.path¿¡ Ãß°¡
-# ÀÌÀ¯: main.py´Â fastapi-app Æú´õ ³»¿¡ Á¸ÀçÇÏ¹Ç·Î, ÇØ´ç °æ·Î°¡ import °Ë»ö °æ·Î¿¡ Æ÷ÇÔµÇ¾î¾ß ÇÔ
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
 from fastapi.testclient import TestClient
-from main import app, save_todos, load_todos, TodoItem  # main.py°¡ fastapi-app Æú´õ ³»¿¡ Á¸ÀçÇÏ¹Ç·Î ¤¡¤º
+from main import app, save_todos, load_todos, TodoItem  # main.pyï¿½ï¿½ fastapi-app ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï¹Ç·ï¿½ ï¿½ï¿½ï¿½ï¿½
 
 client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def setup_and_teardown():
-    # Å×½ºÆ® Àü ÃÊ±âÈ­
     save_todos([])
     yield
-    # Å×½ºÆ® ÈÄ Á¤¸®
     save_todos([])
 
 def test_get_todos_empty():
