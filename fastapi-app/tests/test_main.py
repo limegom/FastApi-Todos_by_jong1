@@ -41,7 +41,11 @@ def test_create_todo():
 def test_create_todo_invalid():
     todo = {"id": 1, "title": "Test"}
     response = client.post("/todos", json=todo)
-    assert response.status_code == 422
+    # Optional 필드 누락 시에도 기본값 적용 → 200
+    assert response.status_code == 200
+    data = response.json()
+    assert data["description"] == ""      # 기본 description 확인
+    assert data["completed"] is False     # 기본 completed 확인
 
 def test_update_todo():
     todo = TodoItem(id=1, title="Test", description="Test description", completed=False)
@@ -61,9 +65,11 @@ def test_delete_todo():
     save_todos([todo.dict()])
     response = client.delete("/todos/1")
     assert response.status_code == 200
-    assert response.json()["message"] == "To-Do item deleted"
+    # 삭제 성공 메시지(한글) 확인
+    assert response.json()["message"] == "To-Do 아이템이 삭제되었습니다"
 
 def test_delete_todo_not_found():
     response = client.delete("/todos/1")
-    assert response.status_code == 200
-    assert response.json()["message"] == "To-Do item deleted"
+    # 존재하지 않는 항목 삭제 시 404 + detail 메시지(한글) 확인
+    assert response.status_code == 404
+    assert response.json()["detail"] == "To-Do 아이템을 찾을 수 없습니다"
