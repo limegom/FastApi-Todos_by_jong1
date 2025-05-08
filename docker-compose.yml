@@ -1,9 +1,11 @@
+version: "3.7"
+
 services:
   fastapi-app:
     build:
       context: ./fastapi-app      # Dockerfile이 위치한 디렉토리 경로
       dockerfile: Dockerfile      # Dockerfile 이름 (생략 가능, 기본값은 'Dockerfile')
-    container_name: FastApi-Todos_by_jong1
+    container_name: FastApi-app
     ports:
       - "5001:5001"
 
@@ -11,16 +13,15 @@ services:
     image: sonarqube:latest
     container_name: sonarqube
     ports:
-      - "8001:9000"
+      - "9000:9000"
     environment:
       - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true  # 메모리 제한 환경에서 유용한 옵션
-      - SONAR_WEB_HOST=0.0.0.0      # 모든 인터페이스에 바인딩 (기본값 127.0.0.1 → loopback만)
     volumes:
       - sonarqube_conf:/opt/sonarqube/conf
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_logs:/opt/sonarqube/logs
       - sonarqube_extensions:/opt/sonarqube/extensions
-      
+
 volumes:
   sonarqube_conf:
   sonarqube_data:
