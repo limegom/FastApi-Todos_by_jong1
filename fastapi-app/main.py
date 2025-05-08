@@ -8,6 +8,8 @@ import logging
 from pathlib import Path
 from threading import Lock
 
+NOT_FOUND_DETAIL = "To-Do 아이템을 찾을 수 없습니다"
+
 # 로거 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -64,7 +66,7 @@ def get_todo_by_id(todo_id: int):
     for t in load_todos():
         if t["id"] == todo_id:
             return t
-    raise HTTPException(status_code=404, detail="To-Do 아이템을 찾을 수 없습니다")
+    raise HTTPException(status_code=404, detail=NOT_FOUND_DETAIL)
 
 @app.put("/todos/{todo_id}", response_model=TodoItem)
 def update_todo(todo_id: int, updated: TodoItem):
@@ -74,7 +76,7 @@ def update_todo(todo_id: int, updated: TodoItem):
             todos[idx] = updated.dict()
             save_todos(todos)
             return updated
-    raise HTTPException(status_code=404, detail="To-Do 아이템을 찾을 수 없습니다")
+    raise HTTPException(status_code=404, detail=NOT_FOUND_DETAIL)
 
 @app.patch("/todos/{todo_id}", response_model=TodoItem)
 def patch_todo(todo_id: int, patch: PatchTodo):
@@ -85,14 +87,14 @@ def patch_todo(todo_id: int, patch: PatchTodo):
             todos[idx] = t
             save_todos(todos)
             return t
-    raise HTTPException(status_code=404, detail="To-Do 아이템을 찾을 수 없습니다")
+    raise HTTPException(status_code=404, detail=NOT_FOUND_DETAIL)
 
 @app.delete("/todos/{todo_id}", response_model=dict)
 def delete_todo(todo_id: int):
     todos = load_todos()
     filtered = [t for t in todos if t["id"] != todo_id]
     if len(filtered) == len(todos):
-        raise HTTPException(status_code=404, detail="To-Do 아이템을 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail=NOT_FOUND_DETAIL)
     save_todos(filtered)
     return {"message": "To-Do 아이템이 삭제되었습니다"}
 
