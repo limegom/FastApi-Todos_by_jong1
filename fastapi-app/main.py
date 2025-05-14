@@ -7,6 +7,7 @@ import json
 import logging
 from pathlib import Path
 from threading import Lock
+from prometheus_fastapi_instrumentator import Instrumentator
 
 NOT_FOUND_DETAIL = "To-Do 아이템을 찾을 수 없습니다"
 
@@ -15,6 +16,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+# Prometheus 메트릭스 엔드포인트 (/metrics)
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 # 모델 정의
 class TodoItem(BaseModel):
