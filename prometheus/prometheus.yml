@@ -14,4 +14,4 @@ scrape_configs:
   # cadvisor 시스템 메트릭 수집 (cadvisor)
   - job_name: 'cadvisor'
     static_configs:
-      - targets: ['cadvisor:8081']
+      - targets: ['cadvisor:8080']
