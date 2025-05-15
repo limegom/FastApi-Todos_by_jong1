@@ -1,4 +1,3 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,26 +12,60 @@
             --border-color: #ccc;
         }
         body {
-            margin: 0; padding: 0;
+            margin: 0;
+            padding: 0;
             background-color: var(--bg-color);
             font-family: "Segoe UI","Helvetica Neue","Apple SD Gothic Neo",sans-serif;
-            font-size: 16px; line-height: 1.6; color: var(--text-color);
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--text-color);
         }
-        .container { display: flex; height: 100vh; }
-        .panel { flex:1; padding:20px; overflow-y:auto; border:1px solid var(--border-color); }
-        .panel.left { border-right:0; }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .panel {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+        .panel.left {
+            border-right: 0;
+        }
+        .controls {
+            margin-bottom: 10px;
+        }
+        .controls input {
+            padding: 6px;
+            width: 60%;
+        }
         button {
-            margin-left:5px;
-            padding:6px 12px;
-            border:none; border-radius:6px;
-            cursor:pointer; font-weight:500;
+            margin-left: 5px;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            background-color: white;
+            transition: background-color 0.1s ease;
         }
-        li { padding:10px; border-bottom:1px solid var(--border-color); }
-        li.completed { text-decoration: line-through; color: gray; }
+        button:active {
+            background-color: darkgray;
+        }
+        li {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        li.completed {
+            text-decoration: line-through;
+            color: gray;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- 왼쪽: Active To-Dos -->
         <div class="panel left">
             <h2>Active To-Dos</h2>
             <form id="active-todo-form">
@@ -42,116 +75,165 @@
             </form>
             <ul id="active-todo-list"></ul>
         </div>
+
+        <!-- 오른쪽: All To-Dos + 검색 -->
         <div class="panel right">
             <h2>All To-Dos</h2>
+            <div class="controls">
+                <input id="search-input" type="text" placeholder="Search by title or description">
+                <button id="search-button" type="button">Search</button>
+                <button id="clear-search-button" type="button">Clear</button>
+                <!-- Delete Completed 버튼 숨김 -->
+            </div>
             <ul id="all-todo-list"></ul>
         </div>
     </div>
+
     <script>
-        'use strict';
-        const apiUrl = '/todos';
+    'use strict';
+    const apiUrl = '/todos';
 
-        document.addEventListener('DOMContentLoaded', renderTodos);
-
-        async function fetchTodos() {
+    document.addEventListener('DOMContentLoaded', () => {
+        renderTodos();
+        document.getElementById('search-button').addEventListener('click', searchTodos);
+        document.getElementById('clear-search-button').addEventListener('click', () => {
+            document.getElementById('search-input').value = '';
+            renderTodos();
+        });
+        document.getElementById('active-todo-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const title = e.target['active-title'].value.trim();
+            const desc  = e.target['active-description'].value.trim();
+            if (!title || !desc) return;
+            const newTodo = { id: Date.now(), title, description: desc, completed: false };
             try {
-                const res = await fetch(apiUrl);
-                if (!res.ok) throw new Error(`Status ${res.status}`);
-                return await res.json();
-            } catch (e) {
-                console.error('Fetch Error:', e);
-                return [];
-            }
-        }
-
-        function createButton(label, onClick) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.textContent = label;
-            btn.addEventListener('click', onClick);
-            return btn;
-        }
-
-        function sanitize(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        async function toggleCompletion(todo) {
-            try {
-                const res = await fetch(`${apiUrl}/${todo.id}`, {
-                    method: 'PATCH',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({completed: !todo.completed})
+                const res = await fetch(apiUrl, {
+                    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(newTodo)
                 });
-                if (res.ok) await renderTodos();
-            } catch (e) { console.error('Toggle Error:', e); }
-        }
-
-        async function deleteTodo(id) {
-            try {
-                const res = await fetch(`${apiUrl}/${id}`, {method:'DELETE'});
-                if (res.ok) await renderTodos();
-            } catch (e) { console.error('Delete Error:', e); }
-        }
-
-        async function showDetail(id) {
-            try {
-                const res = await fetch(`${apiUrl}/${id}`);
-                if (!res.ok) throw new Error();
-                const todo = await res.json();
-                alert(`Title: ${todo.title}\nDescription: ${todo.description}\nCompleted: ${todo.completed}`);
-            } catch {
-                alert('To-Do item not found');
+                if (res.ok) { e.target.reset(); renderTodos(); }
+            } catch (err) {
+                console.error('Create Error:', err);
             }
-        }
+        });
+    });
 
-        function createTodoElement(todo, showDetailBtn = true) {
-            const li = document.createElement('li');
-            if (todo.completed) li.classList.add('completed');
-            li.innerHTML = `<strong>${sanitize(todo.title)}</strong>: ${sanitize(todo.description)}`;
-            if (showDetailBtn) li.appendChild(createButton('Detail', () => showDetail(todo.id)));
-            li.appendChild(createButton(todo.completed ? 'Mark Incomplete' : 'Mark Complete', () => toggleCompletion(todo)));
-            li.appendChild(createButton('Delete', () => deleteTodo(todo.id)));
-            return li;
+    async function fetchTodos() {
+        try {
+            const res = await fetch(apiUrl);
+            if (!res.ok) throw new Error(`Status ${res.status}`);
+            return await res.json();
+        } catch (e) {
+            console.error('Fetch Error:', e);
+            return [];
         }
+    }
 
-        async function renderTodos() {
-            const todos = await fetchTodos();
-            const activeList = document.getElementById('active-todo-list');
-            const allList = document.getElementById('all-todo-list');
-            activeList.innerHTML = '';
-            allList.innerHTML = '';
-            todos.forEach(todo => {
-                allList.appendChild(createTodoElement(todo));
-                if (!todo.completed) {
-                    const li = createTodoElement(todo, false);
-                    li.appendChild(createButton('Complete', () => toggleCompletion(todo)));
-                    activeList.appendChild(li);
-                }
-            });
+    async function searchTodos() {
+        const q = document.getElementById('search-input').value.trim();
+        if (!q) return renderTodos();
+        const url = `${apiUrl}/search?query=${encodeURIComponent(q)}`;
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+            const results = await res.json();
+            renderAllList(results);
+        } catch (e) {
+            console.error(e);
+            alert('검색 중 오류가 발생했습니다');
         }
+    }
 
-        document.getElementById('active-todo-form')
-            .addEventListener('submit', async e => {
-                e.preventDefault();
-                const title = e.target['active-title'].value.trim();
-                const desc = e.target['active-description'].value.trim();
-                if (!title || !desc) return;
-                const newTodo = {id: Date.now(), title, description: desc, completed:false};
-                try {
-                    const res = await fetch(apiUrl, {
-                        method:'POST',
-                        headers:{'Content-Type':'application/json'},
-                        body: JSON.stringify(newTodo)
-                    });
-                    if (res.ok) {
-                        e.target.reset();
-                        await renderTodos();
-                    }
-                } catch (e) { console.error('Create Error:', e); }
-            });
+    function createButton(label, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = label;
+        btn.addEventListener('click', onClick);
+        return btn;
+    }
+
+    function sanitize(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function createTodoElement(todo, showDetailBtn = true) {
+        const li = document.createElement('li');
+        if (todo.completed) li.classList.add('completed');
+        const created = todo.created_at ? new Date(todo.created_at).toLocaleString() : 'unknown';
+        li.innerHTML = `
+            <strong>${sanitize(todo.title)}</strong>
+            <em style="font-size:0.9em;color:#666;">[${created}]</em>
+            : ${sanitize(todo.description)}
+        `;
+        if (showDetailBtn) li.appendChild(createButton('Detail', () => showDetail(todo.id)));
+        li.appendChild(createButton(
+            todo.completed ? 'Mark Incomplete' : 'Mark Complete',
+            () => toggleCompletion(todo.id)
+        ));
+        li.appendChild(createButton('Delete', () => deleteTodo(todo.id)));
+        return li;
+    }
+
+    async function renderTodos() {
+        const todos = await fetchTodos();
+        renderAllList(todos);
+        renderActiveList(todos);
+    }
+
+    function renderAllList(todos) {
+        const allList = document.getElementById('all-todo-list'); allList.innerHTML = '';
+        todos.forEach(todo => allList.appendChild(createTodoElement(todo)));
+    }
+
+    function renderActiveList(todos) {
+        const activeList = document.getElementById('active-todo-list'); activeList.innerHTML = '';
+        todos.filter(t => !t.completed).forEach(todo => activeList.appendChild(createTodoElement(todo, false)));
+    }
+
+    async function toggleCompletion(id) {
+        try {
+            const res = await fetch(`${apiUrl}/${id}/complete`, { method: 'PATCH' });
+            if (res.ok) renderTodos();
+            else {
+                const err = await res.json();
+                alert('토글 실패: ' + err.detail);
+            }
+        } catch (e) {
+            console.error('Toggle Error:', e);
+            alert('토글 중 오류가 발생했습니다: ' + e.message);
+        }
+    }
+
+    async function deleteTodo(id) {
+        try {
+            const res = await fetch(`${apiUrl}/${id}`, {method:'DELETE'});
+            if (res.ok) renderTodos();
+            else {
+                const err = await res.json();
+                alert('삭제 실패: ' + err.detail);
+            }
+        } catch (e) {
+            console.error('Delete Error:', e);
+            alert('삭제 중 오류가 발생했습니다');
+        }
+    }
+
+    async function showDetail(id) {
+        try {
+            const res = await fetch(`${apiUrl}/${id}`);
+            if (!res.ok) throw new Error();
+            const todo = await res.json();
+            alert(
+                `Title: ${todo.title}\n` +
+                `Description: ${todo.description}\n` +
+                `Completed: ${todo.completed}\n` +
+                `Created at: ${todo.created_at || 'unknown'}`
+            );
+        } catch {
+            alert('To-Do item not found');
+        }
+    }
     </script>
 </body>
 </html>
