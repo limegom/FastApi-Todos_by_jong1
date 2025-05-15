@@ -10,7 +10,7 @@ scrape_configs:
   # 시스템 메트릭 수집 (node-exporter)
   - job_name: 'node'
     static_configs:
-      - targets: ['node-exporter:7100']
+      - targets: ['node-exporter:9100']
   # cadvisor 시스템 메트릭 수집 (cadvisor)
   - job_name: 'cadvisor'
     static_configs:

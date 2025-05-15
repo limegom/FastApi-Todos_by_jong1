@@ -8,8 +8,7 @@ services:
     container_name: FastApi-app
     ports:
       - "5001:5001"
-    networks:
-      - monitoring
+ 
 
   sonarqube:
     image: sonarqube:latest
@@ -23,8 +22,7 @@ services:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_logs:/opt/sonarqube/logs
       - sonarqube_extensions:/opt/sonarqube/extensions
-    networks:
-      - monitoring
+
 
   prometheus:
     image: prom/prometheus:latest
@@ -35,8 +33,7 @@ services:
       - "7070:9090"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-    networks:
-      - monitoring
+
 
   grafana:
     image: grafana/grafana:latest
@@ -47,16 +44,14 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana-data:/var/lib/grafana
-    networks:
-      - monitoring
+
 
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
     ports:
       - "7100:9100"
-    networks:
-      - monitoring
+
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
@@ -71,8 +66,7 @@ services:
     command:
       - "--prometheus_endpoint=/metrics"
     restart: unless-stopped
-    networks:
-      - monitoring
+
 
 volumes:
   sonarqube_conf:
@@ -80,7 +74,3 @@ volumes:
   sonarqube_logs:
   sonarqube_extensions:
   grafana-data:
-
-networks:
-  monitoring:
-    driver: bridge
