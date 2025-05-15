@@ -8,10 +8,7 @@ services:
     container_name: FastApi-app
     ports:
       - "5001:5001"
-<<<<<<< HEAD
  
-=======
->>>>>>> parent of 21274c1 (10주차 수정)
 
   sonarqube:
     image: sonarqube:latest
@@ -25,10 +22,6 @@ services:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_logs:/opt/sonarqube/logs
       - sonarqube_extensions:/opt/sonarqube/extensions
-<<<<<<< HEAD
-
-=======
->>>>>>> parent of 21274c1 (10주차 수정)
 
   prometheus:
     image: prom/prometheus:latest
@@ -36,44 +29,32 @@ services:
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
-      - "7070:7070"
+      - "9090:9090"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-<<<<<<< HEAD
-
-=======
->>>>>>> parent of 21274c1 (10주차 수정)
 
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin  # 기본 Grafana 로그인 비밀번호
     volumes:
       - grafana-data:/var/lib/grafana
-<<<<<<< HEAD
-
-=======
->>>>>>> parent of 21274c1 (10주차 수정)
 
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
     ports:
-<<<<<<< HEAD
       - "7100:9100"
 
 
-=======
-      - "7100:7100"
->>>>>>> parent of 21274c1 (10주차 수정)
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
     ports:
-      - "8081:8081"
+      - "8081:8080"
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
