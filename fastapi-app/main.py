@@ -26,7 +26,7 @@ instrumentator.expose(app)
 class TodoItem(BaseModel):
     id: int
     title: str = Field(..., min_length=1)
-    description: Optional[str] = None
+    description: Optional[str] = ""
     completed: bool = False
     created_at: Optional[str] = None
 
@@ -52,19 +52,17 @@ def save_todos(todos: List[dict]) -> None:
 
 @app.get("/todos", response_model=List[TodoItem])
 def get_todos():
-    """모든 To-Do 항목 반환"""
     todos = load_todos()
     return sorted(todos, key=lambda t: t.get("completed", False))
 
 @app.post("/todos", response_model=TodoItem)
 def create_todo(item: TodoItem):
-    """새로운 To-Do 항목 생성"""
     todos = load_todos()
     if any(t["id"] == item.id for t in todos):
         raise HTTPException(status_code=400, detail="이미 존재하는 ID입니다")
     if not item.created_at:
         item.created_at = datetime.utcnow().isoformat()
-    todos.append(item.dict())
+    todos.append(item.model_dump())
     save_todos(todos)
     return item
 
@@ -88,7 +86,7 @@ def update_todo(todo_id: int, item: TodoItem):
     todos = load_todos()
     for idx, t in enumerate(todos):
         if t["id"] == todo_id:
-            updated = item.dict()
+            updated = item.model_dump()
             updated["id"] = todo_id
             updated["created_at"] = t["created_at"]
             todos[idx] = updated
@@ -103,7 +101,7 @@ def delete_todo(todo_id: int):
     if len(remaining) == len(todos):
         raise HTTPException(status_code=404, detail=NOT_FOUND_DETAIL)
     save_todos(remaining)
-    return {"message": f"To-Do 아이템 {todo_id}를 삭제했다"}
+    return {"message": "To-Do 아이템이 삭제되었습니다"}
 
 @app.delete("/todos/completed", response_model=dict)
 def delete_completed_todos():
@@ -125,11 +123,9 @@ def read_root():
 
 @app.patch("/todos/{todo_id}/complete", response_model=TodoItem, status_code=status.HTTP_200_OK)
 def complete_todo(todo_id: int):
-    """단일 To-Do 항목 완료 상태 토글"""
     todos = load_todos()
     for idx, t in enumerate(todos):
         if t["id"] == todo_id:
-            # completed 값을 반전하여 토글 처리
             todos[idx]["completed"] = not t.get("completed", False)
             save_todos(todos)
             return todos[idx]
