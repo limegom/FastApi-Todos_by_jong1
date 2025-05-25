@@ -1,36 +1,29 @@
 [
     {
-        "id": 1741513855268,
+        "id": 1748237760790,
         "title": "20211523",
         "description": "김종원",
-        "completed": false
+        "completed": false,
+        "created_at": "2025-05-26T05:36:00.796768",
+        "due_date": "2021-03-01",
+        "days_left": -1547
     },
     {
-        "id": 1747311242516,
-        "title": "안녕하세요",
-        "description": "안녕하세요2",
+        "id": 1748237790963,
+        "title": "오픈소스",
+        "description": "종강일",
         "completed": false,
-        "created_at": "2025-05-15T12:14:02.521998"
+        "created_at": "2025-05-26T05:36:31.274662",
+        "due_date": "2025-06-20",
+        "days_left": 25
     },
     {
-        "id": 1747311273431,
-        "title": "입력한",
-        "description": "시간",
+        "id": 1748476250306,
+        "title": "5.30",
+        "description": "금요일",
         "completed": false,
-        "created_at": "2025-05-15T12:14:33.434299"
-    },
-    {
-        "id": 1747311284746,
-        "title": "검색",
-        "description": "가능",
-        "completed": false,
-        "created_at": "2025-05-15T12:14:44.749391"
-    },
-    {
-        "id": 1747311316080,
-        "title": "21학번",
-        "description": "ㄱㅈㅇ",
-        "completed": false,
-        "created_at": "2025-05-15T12:15:16.083530"
+        "created_at": "2025-05-28T23:50:50.324579",
+        "due_date": "2025-05-30",
+        "days_left": 2
     }
 ]

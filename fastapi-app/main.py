@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, date
 import json
 import logging
 from pathlib import Path
@@ -26,9 +26,11 @@ instrumentator.expose(app)
 class TodoItem(BaseModel):
     id: int
     title: str = Field(..., min_length=1)
-    description: Optional[str] = None
+    description: Optional[str] = ""
     completed: bool = False
     created_at: Optional[str] = None
+    due_date: Optional[str] = None      # YYYY-MM-DD 포맷
+    days_left: Optional[int] = None     # D-day 용 계산 필드
 
 def load_todos() -> List[dict]:
     try:
@@ -50,21 +52,33 @@ def save_todos(todos: List[dict]) -> None:
         logger.error("파일 쓰기 실패: %s", e)
         raise HTTPException(status_code=500, detail="To-Do 파일 저장 실패")
 
+def compute_days_left(due: Optional[str]) -> Optional[int]:
+    if not due:
+        return None
+    try:
+        d = date.fromisoformat(due)
+        return (d - datetime.utcnow().date()).days
+    except ValueError:
+        return None
+
+
 @app.get("/todos", response_model=List[TodoItem])
 def get_todos():
-    """모든 To-Do 항목 반환"""
     todos = load_todos()
+    # 각 항목에 days_left 계산값 추가
+    for t in todos:
+        t["days_left"] = compute_days_left(t.get("due_date"))
     return sorted(todos, key=lambda t: t.get("completed", False))
 
 @app.post("/todos", response_model=TodoItem)
 def create_todo(item: TodoItem):
-    """새로운 To-Do 항목 생성"""
     todos = load_todos()
     if any(t["id"] == item.id for t in todos):
         raise HTTPException(status_code=400, detail="이미 존재하는 ID입니다")
     if not item.created_at:
         item.created_at = datetime.utcnow().isoformat()
-    todos.append(item.dict())
+    item.days_left = compute_days_left(item.due_date)
+    todos.append(item.model_dump())
     save_todos(todos)
     return item
 
@@ -79,7 +93,8 @@ def search_todos(query: str = Query(..., min_length=1)):
 @app.get("/todos/{todo_id}", response_model=TodoItem)
 def get_todo_by_id(todo_id: int):
     for t in load_todos():
-        if t["id"] == todo_id:
+         if t["id"] == todo_id:
+            t["days_left"] = compute_days_left(t.get("due_date"))
             return t
     raise HTTPException(status_code=404, detail=NOT_FOUND_DETAIL)
 
@@ -88,9 +103,10 @@ def update_todo(todo_id: int, item: TodoItem):
     todos = load_todos()
     for idx, t in enumerate(todos):
         if t["id"] == todo_id:
-            updated = item.dict()
+            updated = item.model_dump()
             updated["id"] = todo_id
             updated["created_at"] = t["created_at"]
+            updated["days_left"] = compute_days_left(updated.get("due_date"))
             todos[idx] = updated
             save_todos(todos)
             return updated
@@ -103,7 +119,7 @@ def delete_todo(todo_id: int):
     if len(remaining) == len(todos):
         raise HTTPException(status_code=404, detail=NOT_FOUND_DETAIL)
     save_todos(remaining)
-    return {"message": f"To-Do 아이템 {todo_id}를 삭제했다"}
+    return {"message": "To-Do 아이템이 삭제되었습니다"}
 
 @app.delete("/todos/completed", response_model=dict)
 def delete_completed_todos():
@@ -125,11 +141,9 @@ def read_root():
 
 @app.patch("/todos/{todo_id}/complete", response_model=TodoItem, status_code=status.HTTP_200_OK)
 def complete_todo(todo_id: int):
-    """단일 To-Do 항목 완료 상태 토글"""
     todos = load_todos()
     for idx, t in enumerate(todos):
         if t["id"] == todo_id:
-            # completed 값을 반전하여 토글 처리
             todos[idx]["completed"] = not t.get("completed", False)
             save_todos(todos)
             return todos[idx]

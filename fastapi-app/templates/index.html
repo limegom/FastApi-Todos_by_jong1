@@ -20,9 +20,29 @@
             line-height: 1.6;
             color: var(--text-color);
         }
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            padding: 20px;
+        }
+        .calendar-cell {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 8px;
+        }
+        .calendar-date {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .calendar-task {
+            font-size: 0.9em;
+            margin-top: 2px;
+        }
         .container {
             display: flex;
-            height: 100vh;
+            height: calc(100vh - 140px);
         }
         .panel {
             flex: 1;
@@ -64,6 +84,9 @@
     </style>
 </head>
 <body>
+    <!-- Weekly Calendar -->
+    <div class="calendar" id="weekly-calendar"></div>
+
     <div class="container">
         <!-- 왼쪽: Active To-Dos -->
         <div class="panel left">
@@ -71,6 +94,7 @@
             <form id="active-todo-form">
                 <input type="text" name="active-title" placeholder="Title" required>
                 <input type="text" name="active-description" placeholder="Description" required>
+                <input type="date" name="active-due-date" required>
                 <button type="submit">Add To-Do</button>
             </form>
             <ul id="active-todo-list"></ul>
@@ -83,7 +107,6 @@
                 <input id="search-input" type="text" placeholder="Search by title or description">
                 <button id="search-button" type="button">Search</button>
                 <button id="clear-search-button" type="button">Clear</button>
-                <!-- Delete Completed 버튼 숨김 -->
             </div>
             <ul id="all-todo-list"></ul>
         </div>
@@ -105,7 +128,13 @@
             const title = e.target['active-title'].value.trim();
             const desc  = e.target['active-description'].value.trim();
             if (!title || !desc) return;
-            const newTodo = { id: Date.now(), title, description: desc, completed: false };
+            const newTodo = {
+                id: Date.now(),
+                title,
+                description: desc,
+                completed: false,
+                due_date: e.target['active-due-date'].value
+            };
             try {
                 const res = await fetch(apiUrl, {
                     method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(newTodo)
@@ -137,10 +166,17 @@
             if (!res.ok) throw new Error(`Search failed: ${res.status}`);
             const results = await res.json();
             renderAllList(results);
+            renderCalendar(results);
         } catch (e) {
             console.error(e);
             alert('검색 중 오류가 발생했습니다');
         }
+    }
+
+    function sanitize(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     function createButton(label, onClick) {
@@ -151,32 +187,45 @@
         return btn;
     }
 
-    function sanitize(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
     function createTodoElement(todo, showDetailBtn = true) {
         const li = document.createElement('li');
         if (todo.completed) li.classList.add('completed');
-        const created = todo.created_at ? new Date(todo.created_at).toLocaleString() : 'unknown';
+
+        const created = todo.created_at
+            ? new Date(todo.created_at).toLocaleString()
+            : 'unknown';
+
+        const daysLeft = (todo.days_left != null)
+            ? todo.days_left
+            : (todo.due_date
+                ? Math.ceil((new Date(todo.due_date) - new Date()) / (1000*60*60*24))
+                : null);
+
+        let ddayText = '';
+        if (todo.due_date && daysLeft != null) {
+            const sign = daysLeft > 0 ? '-' : (daysLeft < 0 ? '+' : '');
+            const absDays = Math.abs(daysLeft);
+            ddayText = `<em style="margin-left:8px;color:#d33;">D${sign}${absDays}</em>`;
+        }
+
         li.innerHTML = `
             <strong>${sanitize(todo.title)}</strong>
             <em style="font-size:0.9em;color:#666;">[${created}]</em>
+            ${ddayText}
             : ${sanitize(todo.description)}
         `;
+
         if (showDetailBtn) li.appendChild(createButton('Detail', () => showDetail(todo.id)));
-        li.appendChild(createButton(
-            todo.completed ? 'Mark Incomplete' : 'Mark Complete',
-            () => toggleCompletion(todo.id)
-        ));
+        const toggleLabel = todo.completed ? 'Mark Incomplete' : 'Mark Complete';
+        li.appendChild(createButton(toggleLabel, () => toggleCompletion(todo.id)));
         li.appendChild(createButton('Delete', () => deleteTodo(todo.id)));
+
         return li;
     }
 
     async function renderTodos() {
         const todos = await fetchTodos();
+        renderCalendar(todos);
         renderAllList(todos);
         renderActiveList(todos);
     }
@@ -189,6 +238,32 @@
     function renderActiveList(todos) {
         const activeList = document.getElementById('active-todo-list'); activeList.innerHTML = '';
         todos.filter(t => !t.completed).forEach(todo => activeList.appendChild(createTodoElement(todo, false)));
+    }
+
+    function renderCalendar(todos) {
+        const cal = document.getElementById('weekly-calendar'); cal.innerHTML = '';
+        const now = new Date();
+        const day = now.getDay();
+        const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
+        const weekStart = new Date(now.setDate(diffToMonday));
+
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(weekStart);
+            d.setDate(weekStart.getDate() + i);
+            const cell = document.createElement('div'); cell.classList.add('calendar-cell');
+            const dateStr = d.toISOString().slice(0, 10);
+            const dateEl = document.createElement('div'); dateEl.classList.add('calendar-date');
+            dateEl.textContent = d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
+            cell.appendChild(dateEl);
+
+            const tasks = todos.filter(t => t.due_date === dateStr);
+            tasks.forEach(t => {
+                const taskEl = document.createElement('div'); taskEl.classList.add('calendar-task');
+                taskEl.textContent = sanitize(t.title);
+                cell.appendChild(taskEl);
+            });
+            cal.appendChild(cell);
+        }
     }
 
     async function toggleCompletion(id) {
@@ -207,7 +282,7 @@
 
     async function deleteTodo(id) {
         try {
-            const res = await fetch(`${apiUrl}/${id}`, {method:'DELETE'});
+            const res = await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
             if (res.ok) renderTodos();
             else {
                 const err = await res.json();
