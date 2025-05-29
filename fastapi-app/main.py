@@ -77,7 +77,10 @@ def create_todo(item: TodoItem):
         raise HTTPException(status_code=400, detail="이미 존재하는 ID입니다")
     if not item.created_at:
         item.created_at = datetime.utcnow().isoformat()
+<<<<<<< HEAD
     item.days_left = compute_days_left(item.due_date)
+=======
+>>>>>>> origin/main
     todos.append(item.model_dump())
     save_todos(todos)
     return item
