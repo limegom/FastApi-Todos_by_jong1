@@ -25,5 +25,14 @@
         "created_at": "2025-05-28T23:50:50.324579",
         "due_date": "2025-05-30",
         "days_left": 2
+    },
+    {
+        "id": 1748496133127,
+        "title": "데브옵스",
+        "description": "수업",
+        "completed": true,
+        "created_at": "2025-05-29T05:22:13.132524",
+        "due_date": "2025-05-30",
+        "days_left": null
     }
 ]
