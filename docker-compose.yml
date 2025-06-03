@@ -5,7 +5,7 @@ services:
     build:
       context: ./fastapi-app      # Dockerfile이 위치한 디렉토리 경로
       dockerfile: Dockerfile      # Dockerfile 이름 (생략 가능, 기본값은 'Dockerfile')
-    container_name: FastApi-app
+    container_name: fastapi-app
     ports:
       - "5001:5001"
     depends_on:
@@ -16,6 +16,7 @@ services:
       - ./fastapi-app:/app
     networks:
       - loadtest-net
+    restart: unless-stopped
 
   sonarqube:
     image: sonarqube:latest
@@ -81,33 +82,15 @@ services:
     networks:
       - loadtest-net
   
-  jmeter:
-    build:
-      context: ./jmeter
-      dockerfile: Dockerfile
-    container_name: jmeter
-    volumes:
-      - ./jmeter:/jmeter
-    command:
-      - jmeter
-      - -n
-      - -t
-      - /jmeter/fastapi_test_plan.jmx
-      - -l
-      - /jmeter/results.jtl
-      - -JBASE_URL=http://fastapi-app:5001
-      - -Jjmeter.save.saveservice.output_format=csv
-      - -e
-      - -o
-      - /jmeter/report
-    networks:
-      - loadtest-net
+ 
 
   loki:
     image: grafana/loki:latest
     container_name: loki
     ports:
       - "3100:3100" 
+    networks:
+      - loadtest-net
 
 volumes:
   sonarqube_conf:

@@ -40,9 +40,10 @@
             font-size: 0.9em;
             margin-top: 2px;
         }
+        /* Active/All To-Do panels 영역 높이를 줄임 */
         .container {
             display: flex;
-            height: calc(100vh - 140px);
+            height: calc(100vh - 200px); /* 기존보다 줄여서 Recurring이 보이도록 */
         }
         .panel {
             flex: 1;
@@ -81,14 +82,25 @@
             text-decoration: line-through;
             color: gray;
         }
+        /* Recurring To-Do 섹션 */
+        #recurring-section {
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            background-color: white;
+            margin: 20px;
+            border-radius: 4px;
+        }
+        #recurring-list {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <!-- Weekly Calendar -->
     <div class="calendar" id="weekly-calendar"></div>
 
+    <!-- Active / All To-Do Panels -->
     <div class="container">
-        <!-- 왼쪽: Active To-Dos -->
         <div class="panel left">
             <h2>Active To-Dos</h2>
             <form id="active-todo-form">
@@ -100,7 +112,6 @@
             <ul id="active-todo-list"></ul>
         </div>
 
-        <!-- 오른쪽: All To-Dos + 검색 -->
         <div class="panel right">
             <h2>All To-Dos</h2>
             <div class="controls">
@@ -112,17 +123,50 @@
         </div>
     </div>
 
+    <!-- Recurring To-Do Section (맨 밑으로 이동) -->
+    <div id="recurring-section">
+        <h3>Recurring To-Do</h3>
+        <form id="recurring-todo-form">
+            <input type="text" name="recur-title" placeholder="Title" required>
+            <input type="text" name="recur-description" placeholder="Description" required>
+
+            <label><input type="radio" name="recur-type" value="daily" checked> Daily</label>
+            <label><input type="radio" name="recur-type" value="weekly"> Weekly</label>
+
+            <div id="weekday-options" style="display:none;">
+                <label><input type="checkbox" value="0"> Sun</label>
+                <label><input type="checkbox" value="1"> Mon</label>
+                <label><input type="checkbox" value="2"> Tue</label>
+                <label><input type="checkbox" value="3"> Wed</label>
+                <label><input type="checkbox" value="4"> Thu</label>
+                <label><input type="checkbox" value="5"> Fri</label>
+                <label><input type="checkbox" value="6"> Sat</label>
+            </div>
+            <button type="submit">Add Recurring</button>
+        </form>
+        <ul id="recurring-list"></ul>
+    </div>
+
     <script>
     'use strict';
     const apiUrl = '/todos';
 
     document.addEventListener('DOMContentLoaded', () => {
         renderTodos();
+
         document.getElementById('search-button').addEventListener('click', searchTodos);
         document.getElementById('clear-search-button').addEventListener('click', () => {
             document.getElementById('search-input').value = '';
             renderTodos();
         });
+
+        document.querySelectorAll('input[name="recur-type"]').forEach(radio => {
+            radio.addEventListener('change', e => {
+                const weekdays = document.getElementById('weekday-options');
+                weekdays.style.display = (e.target.value === 'weekly') ? 'block' : 'none';
+            });
+        });
+
         document.getElementById('active-todo-form').addEventListener('submit', async e => {
             e.preventDefault();
             const title = e.target['active-title'].value.trim();
@@ -137,14 +181,74 @@
             };
             try {
                 const res = await fetch(apiUrl, {
-                    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(newTodo)
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newTodo)
                 });
                 if (res.ok) { e.target.reset(); renderTodos(); }
             } catch (err) {
                 console.error('Create Error:', err);
             }
         });
+
+        document.getElementById('recurring-todo-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const title = e.target['recur-title'].value.trim();
+            const description = e.target['recur-description'].value.trim();
+            if (!title || !description) return;
+
+            const type = document.querySelector('input[name="recur-type"]:checked').value;
+            let repeatDays = [];
+            if (type === 'weekly') {
+                document.querySelectorAll('#weekday-options input[type="checkbox"]:checked').forEach(cb => {
+                    repeatDays.push(parseInt(cb.value));
+                });
+                if (repeatDays.length === 0) {
+                    alert('Weekly 반복인 경우 최소 하나 이상의 요일을 선택해야 합니다.');
+                    return;
+                }
+            }
+
+            const newRecurring = {
+                id: Date.now(),
+                title: title,
+                description: description,
+                repeat_type: type,
+                repeat_days: repeatDays
+            };
+
+            try {
+                const res = await fetch('/repeating', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newRecurring)
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert('등록 실패: ' + err.detail);
+                    return;
+                }
+                e.target.reset();
+                document.getElementById('weekday-options').style.display = 'none';
+                await loadAndRenderRepeating();
+                renderTodos();
+            } catch (err) {
+                console.error('Add Recurring Error:', err);
+                alert('서버 요청 중 오류가 발생했습니다.');
+            }
+        });
     });
+
+    async function renderTodos() {
+        const [todos, repeating] = await Promise.all([
+            fetchTodos(),
+            fetchRepeatingTodos()
+        ]);
+        renderCalendar(todos, repeating);
+        renderAllList(todos, repeating);
+        renderActiveList(todos);
+        loadAndRenderRepeating();
+    }
 
     async function fetchTodos() {
         try {
@@ -157,43 +261,149 @@
         }
     }
 
-    async function searchTodos() {
-        const q = document.getElementById('search-input').value.trim();
-        if (!q) return renderTodos();
-        const url = `${apiUrl}/search?query=${encodeURIComponent(q)}`;
+    async function fetchRepeatingTodos() {
         try {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`Search failed: ${res.status}`);
-            const results = await res.json();
-            renderAllList(results);
-            renderCalendar(results);
+            const res = await fetch('/repeating');
+            if (!res.ok) throw new Error(`Status ${res.status}`);
+            return await res.json();
         } catch (e) {
-            console.error(e);
-            alert('검색 중 오류가 발생했습니다');
+            console.error('Fetch Repeating Error:', e);
+            return [];
         }
     }
 
-    function sanitize(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    function renderAllList(todos, repeating = []) {
+        const allList = document.getElementById('all-todo-list');
+        allList.innerHTML = '';
+
+        todos.forEach(todo => allList.appendChild(createTodoElement(todo)));
+
+        repeating.forEach(rt => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <strong>[반복] ${sanitize(rt.title)}</strong>
+                : ${sanitize(rt.description)}
+                <em style="margin-left:8px;color:gray;">
+                    (${rt.repeat_type === 'daily' ? '매일' : '요일: ' + rt.repeat_days.join(',')})
+                </em>
+            `;
+            allList.appendChild(li);
+        });
     }
 
-    function createButton(label, onClick) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = label;
-        btn.addEventListener('click', onClick);
-        return btn;
+    function renderActiveList(todos) {
+        const activeList = document.getElementById('active-todo-list');
+        activeList.innerHTML = '';
+        todos.filter(t => !t.completed)
+             .forEach(todo => activeList.appendChild(createTodoElement(todo, false)));
+    }
+
+    function renderCalendar(todos, repeating = []) {
+        const cal = document.getElementById('weekly-calendar');
+        cal.innerHTML = '';
+        const now = new Date();
+        const day = now.getDay();
+        const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
+        const weekStart = new Date(now.setDate(diffToMonday));
+
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(weekStart);
+            d.setDate(weekStart.getDate() + i);
+            const cell = document.createElement('div');
+            cell.classList.add('calendar-cell');
+            const dateStr = d.toISOString().slice(0, 10);
+            const weekday = d.getDay();
+
+            const dateEl = document.createElement('div');
+            dateEl.classList.add('calendar-date');
+            dateEl.textContent = d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
+            cell.appendChild(dateEl);
+
+            const dayTodos = todos.filter(t => t.due_date === dateStr);
+            dayTodos.forEach(t => {
+                const taskEl = document.createElement('div');
+                taskEl.classList.add('calendar-task');
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = t.completed;
+                checkbox.addEventListener('change', async () => {
+                    try {
+                        const res = await fetch(`/todos/${t.id}/complete`, { method: 'PATCH' });
+                        if (res.ok) renderTodos();
+                        else alert('업데이트 실패');
+                    } catch (e) {
+                        console.error(e);
+                        alert('업데이트 중 오류 발생');
+                    }
+                });
+
+                const label = document.createElement('label');
+                label.textContent = ' ' + sanitize(t.title);
+
+                taskEl.appendChild(checkbox);
+                taskEl.appendChild(label);
+                cell.appendChild(taskEl);
+            });
+
+            repeating.forEach(rt => {
+                const matches = rt.repeat_type === 'daily' ||
+                    (rt.repeat_type === 'weekly' && Array.isArray(rt.repeat_days) && rt.repeat_days.includes(weekday));
+
+                if (matches) {
+                    const taskEl = document.createElement('div');
+                    taskEl.classList.add('calendar-task');
+                    const label = document.createElement('label');
+                    label.textContent = sanitize(rt.title);
+                    taskEl.appendChild(label);
+                    cell.appendChild(taskEl);
+                }
+            });
+
+            cal.appendChild(cell);
+        }
+    }
+
+    async function loadAndRenderRepeating() {
+        const recurringList = document.getElementById('recurring-list');
+        recurringList.innerHTML = '';
+
+        const items = await fetchRepeatingTodos();
+        if (items.length === 0) {
+            return;
+        }
+
+        items.forEach(rt => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <strong>${sanitize(rt.title)}</strong>: ${sanitize(rt.description)}
+                <em style="margin-left:8px;color:gray;">(${rt.repeat_type === 'daily' ? '매일' : '요일: ' + rt.repeat_days.join(',')})</em>
+                <button type="button" onclick="deleteRecurring(${rt.id})" style="margin-left:10px;">Delete</button>
+            `;
+            recurringList.appendChild(li);
+        });
+    }
+
+    async function deleteRecurring(id) {
+        if (!confirm('정말 이 반복 항목을 삭제하시겠습니까?')) return;
+        try {
+            const res = await fetch(`/repeating/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const err = await res.json();
+                alert('삭제 실패: ' + err.detail);
+                return;
+            }
+            await loadAndRenderRecurring();
+            renderTodos();
+        } catch (e) {
+            console.error('Delete Recurring Error:', e);
+            alert('서버 요청 중 오류가 발생했습니다.');
+        }
     }
 
     function createTodoElement(todo, showDetailBtn = true) {
         const li = document.createElement('li');
         if (todo.completed) li.classList.add('completed');
-
-        const created = todo.created_at
-            ? new Date(todo.created_at).toLocaleString()
-            : 'unknown';
 
         const daysLeft = (todo.days_left != null)
             ? todo.days_left
@@ -210,7 +420,6 @@
 
         li.innerHTML = `
             <strong>${sanitize(todo.title)}</strong>
-            <em style="font-size:0.9em;color:#666;">[${created}]</em>
             ${ddayText}
             : ${sanitize(todo.description)}
         `;
@@ -223,47 +432,18 @@
         return li;
     }
 
-    async function renderTodos() {
-        const todos = await fetchTodos();
-        renderCalendar(todos);
-        renderAllList(todos);
-        renderActiveList(todos);
+    function createButton(label, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = label;
+        btn.addEventListener('click', onClick);
+        return btn;
     }
 
-    function renderAllList(todos) {
-        const allList = document.getElementById('all-todo-list'); allList.innerHTML = '';
-        todos.forEach(todo => allList.appendChild(createTodoElement(todo)));
-    }
-
-    function renderActiveList(todos) {
-        const activeList = document.getElementById('active-todo-list'); activeList.innerHTML = '';
-        todos.filter(t => !t.completed).forEach(todo => activeList.appendChild(createTodoElement(todo, false)));
-    }
-
-    function renderCalendar(todos) {
-        const cal = document.getElementById('weekly-calendar'); cal.innerHTML = '';
-        const now = new Date();
-        const day = now.getDay();
-        const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
-        const weekStart = new Date(now.setDate(diffToMonday));
-
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(weekStart);
-            d.setDate(weekStart.getDate() + i);
-            const cell = document.createElement('div'); cell.classList.add('calendar-cell');
-            const dateStr = d.toISOString().slice(0, 10);
-            const dateEl = document.createElement('div'); dateEl.classList.add('calendar-date');
-            dateEl.textContent = d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
-            cell.appendChild(dateEl);
-
-            const tasks = todos.filter(t => t.due_date === dateStr);
-            tasks.forEach(t => {
-                const taskEl = document.createElement('div'); taskEl.classList.add('calendar-task');
-                taskEl.textContent = sanitize(t.title);
-                cell.appendChild(taskEl);
-            });
-            cal.appendChild(cell);
-        }
+    function sanitize(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     async function toggleCompletion(id) {
@@ -307,6 +487,22 @@
             );
         } catch {
             alert('To-Do item not found');
+        }
+    }
+
+    async function searchTodos() {
+        const q = document.getElementById('search-input').value.trim();
+        if (!q) return renderTodos();
+        const url = `${apiUrl}/search?query=${encodeURIComponent(q)}`;
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+            const results = await res.json();
+            renderAllList(results);
+            renderCalendar(results);
+        } catch (e) {
+            console.error(e);
+            alert('검색 중 오류가 발생했습니다');
         }
     }
     </script>

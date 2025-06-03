@@ -62,6 +62,8 @@ async def log_requests(request: Request, call_next):
 
     return response
 
+app.middleware("http")(log_requests)
+
 class TodoItem(BaseModel):
     id: int
     title: str = Field(..., min_length=1)
@@ -186,3 +188,53 @@ def complete_todo(todo_id: int):
             save_todos(todos)
             return todos[idx]
     raise HTTPException(status_code=404, detail=NOT_FOUND_DETAIL)
+
+# 반복 To-Do 저장 파일
+REPEAT_FILE = Path("repeating_todos.json")
+
+class RepeatingTodo(BaseModel):
+    id: int
+    title: str = Field(..., min_length=1)
+    description: Optional[str] = ""
+    repeat_type: str = Field(..., pattern="^(daily|weekly)$")  # ✅ 수정됨
+    repeat_days: Optional[List[int]] = []  # 0=Sun ~ 6=Sat
+
+def load_repeating() -> List[dict]:
+    try:
+        return json.loads(REPEAT_FILE.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return []
+    except json.JSONDecodeError as e:
+        logger.error("반복 항목 JSON 디코딩 실패: %s", e)
+        raise HTTPException(status_code=500, detail="반복 항목 로딩 실패")
+
+def save_repeating(items: List[dict]) -> None:
+    try:
+        with FILE_LOCK:
+            REPEAT_FILE.write_text(
+                json.dumps(items, indent=4, ensure_ascii=False), encoding="utf-8"
+            )
+    except OSError as e:
+        logger.error("반복 항목 저장 실패: %s", e)
+        raise HTTPException(status_code=500, detail="반복 항목 저장 실패")
+@app.get("/repeating", response_model=List[RepeatingTodo])
+def get_repeating_todos():
+    return load_repeating()
+
+@app.post("/repeating", response_model=RepeatingTodo)
+def create_repeating_todo(item: RepeatingTodo):
+    items = load_repeating()
+    if any(x["id"] == item.id for x in items):
+        raise HTTPException(status_code=400, detail="이미 존재하는 ID입니다")
+    items.append(item.model_dump())
+    save_repeating(items)
+    return item
+
+@app.delete("/repeating/{item_id}", response_model=dict)
+def delete_repeating_todo(item_id: int):
+    items = load_repeating()
+    remaining = [x for x in items if x["id"] != item_id]
+    if len(items) == len(remaining):
+        raise HTTPException(status_code=404, detail="반복 항목을 찾을 수 없습니다")
+    save_repeating(remaining)
+    return {"message": "반복 항목이 삭제되었습니다"}

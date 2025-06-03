@@ -21,7 +21,7 @@
         "id": 1748476250306,
         "title": "5.30",
         "description": "금요일",
-        "completed": false,
+        "completed": true,
         "created_at": "2025-05-28T23:50:50.324579",
         "due_date": "2025-05-30",
         "days_left": 2
@@ -33,6 +33,15 @@
         "completed": true,
         "created_at": "2025-05-29T05:22:13.132524",
         "due_date": "2025-05-30",
+        "days_left": null
+    },
+    {
+        "id": 1748933591061,
+        "title": "데브옵스",
+        "description": "휴강",
+        "completed": false,
+        "created_at": "2025-06-03T06:53:11.070664",
+        "due_date": "2025-06-06",
         "days_left": null
     }
 ]
